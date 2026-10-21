@@ -85,24 +85,14 @@ jobs:
       - name: Build and start the system (docker compose)
         run: docker compose up --build --detach --wait --wait-timeout 120
 
-      - name: Smoke test – create a link and follow it
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Smoke test – service contracts end to end
         run: |
-          set -euo pipefail
-          code=$(curl -fsS -X POST localhost:8001/links \
-            -H 'Content-Type: application/json' \
-            -d '{"url": "https://example.com/tutorial"}' | python3 -c 'import json,sys; print(json.load(sys.stdin)["code"])')
-          echo "Created short code: $code"
-
-          location=$(curl -fsS -o /dev/null -w '%{redirect_url}' "localhost:8000/$code")
-          test "$location" = "https://example.com/tutorial"
-
-          clicks=$(curl -fsS "localhost:8003/stats/$code" | python3 -c 'import json,sys; print(json.load(sys.stdin)["total_clicks"])')
-          test "$clicks" = "1"
-
-          status=$(curl -s -o /dev/null -w '%{http_code}' -X POST localhost:8001/links \
-            -H 'Content-Type: application/json' -d '{"url": "javascript:alert(1)"}')
-          test "$status" = "422"
-          echo "Smoke test passed"
+          pip install httpx==0.28.1
+          python tests/system/smoke_test.py
 
       - name: Service logs
         if: always()
