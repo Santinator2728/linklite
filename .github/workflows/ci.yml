@@ -47,6 +47,30 @@ jobs:
             coverage.xml
             test-results.xml
 
+  quality-gate:
+    name: Quality gate (SonarCloud)
+    runs-on: ubuntu-latest
+    needs: lint-and-test
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history, so SonarCloud can tell new code from old code
+
+      - name: Download coverage report
+        uses: actions/download-artifact@v4
+        with:
+          name: test-reports
+
+      - name: Warn if SonarCloud is not configured yet
+        if: env.SONAR_TOKEN == ''
+        run: echo "::warning::SONAR_TOKEN secret is missing, SonarCloud analysis skipped (XP-28)"
+
+      - name: SonarCloud scan and quality gate
+        if: env.SONAR_TOKEN != ''
+        uses: SonarSource/sonarqube-scan-action@v5
+
   sast:
     name: SAST (Semgrep)
     runs-on: ubuntu-latest
