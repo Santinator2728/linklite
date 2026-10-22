@@ -30,7 +30,7 @@ Constraints: one developer with about 6 hours per sprint, a public GitHub reposi
 
 - Every change goes through a pull request and the full pipeline; nothing reaches `main` without passing the gates.
 - The developer reviews and must be able to explain every change before merging (the Sprint Review presentations depend on it).
-- Commits made with Claude Code carry a `Co-Authored-By: Claude` trailer, so AI-assisted work is traceable.
+- Code commits made with Claude Code carry a `Co-Authored-By: Claude` trailer, so AI-assisted code is traceable. Documentation is written and owned by the developer; how AI was used is disclosed in this ADR and in the final report.
 - AI output is never used to fabricate project evidence (Jira records reflect real dates and real work).
 
 ## Decision 2 – AI-augmented gate in the pipeline: LLM code review (Sprint 3)
