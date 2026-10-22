@@ -1,7 +1,7 @@
 # ADR-001: Architectural style – small services with Docker Compose
 
 - **Status:** Accepted
-- **Date:** 22 October 2026
+- **Date:** 17 October 2026
 - **Jira:** XP-23
 - **Decider:** Santiago Guerrero (Product Owner, Sprint 2)
 
@@ -20,20 +20,10 @@ The workload has three parts with different quality needs:
 | Redirect a short code | High, user-facing | Latency and availability |
 | Record and query clicks | High writes, rare reads | Throughput; must not slow the redirect |
 
-## Options considered
 
-**A. Modular monolith.** One FastAPI application with internal modules.
-Simplest to build and deploy. However, every module shares one process and one deployment, so coupling stays hidden inside function calls. A failure in analytics can only show up as a slow redirect, never as a broken interface between components. P1 and the architectural insight would have little to show.
+## Project selection
 
-**B. Small services (chosen).** Three FastAPI services, each with its own data store, talking over HTTP, started together with Docker Compose.
-Each service can be tested, scanned and deployed on its own, and the dependencies between them are explicit HTTP contracts that the pipeline and the metrics can observe.
-
-**C. Event-driven services with a message broker** (for example Redis Streams or RabbitMQ between redirect and analytics).
-Removes the runtime coupling between redirect and analytics, but adds a broker to run, test and monitor. This is too much for Sprint 2. It stays a candidate if the coupling described below turns out to be a real problem.
-
-## Decision
-
-Use **option B**: three small services, each owning its data, deployed with Docker Compose as infrastructure as code.
+Three small services, each owning its data, deployed with Docker Compose as infrastructure as code.
 
 ```mermaid
 flowchart LR
