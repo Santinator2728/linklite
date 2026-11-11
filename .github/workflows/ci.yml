@@ -69,7 +69,7 @@ jobs:
 
       - name: SonarCloud scan and quality gate
         if: env.SONAR_TOKEN != ''
-        uses: SonarSource/sonarqube-scan-action@v5
+        uses: SonarSource/sonarqube-scan-action@v6
 
   sast:
     name: SAST (Semgrep)
