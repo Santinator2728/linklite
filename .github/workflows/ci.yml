@@ -87,7 +87,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies (locked, hash-verified)
-        run: pip install --require-hashes --only-binary :all: -r ai-gates/code-review/requirements.lock
+        run: "pip install --require-hashes --only-binary :all: -r ai-gates/code-review/requirements.lock"
 
       - name: Review the pull request diff with Claude
         run: python ai-gates/code-review/review.py --base "origin/${{ github.base_ref }}" --output ai-review.json
