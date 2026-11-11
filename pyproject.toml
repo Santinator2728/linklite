@@ -13,18 +13,19 @@ select = ["E", "F", "W", "I", "B", "UP", "S", "SIM"]
 
 [tool.ruff.lint.per-file-ignores]
 "services/*/tests/*" = ["S101"]  # assert is how pytest works
+"ai-gates/*/test_*.py" = ["S101"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["link_service", "redirect_service", "analytics_service"]
+known-first-party = ["link_service", "redirect_service", "analytics_service", "review"]
 
 [tool.pytest.ini_options]
 addopts = "--import-mode=importlib"
-pythonpath = ["services/link", "services/redirect", "services/analytics"]
-testpaths = ["services"]
+pythonpath = ["services/link", "services/redirect", "services/analytics", "ai-gates/code-review"]
+testpaths = ["services", "ai-gates"]
 
 [tool.coverage.run]
-source = ["services"]
-omit = ["services/*/tests/*"]
+source = ["services", "ai-gates"]
+omit = ["services/*/tests/*", "ai-gates/*/test_*.py"]
 relative_files = true
 
 [tool.coverage.report]

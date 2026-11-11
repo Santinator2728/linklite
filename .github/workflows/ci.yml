@@ -71,6 +71,35 @@ jobs:
         if: env.SONAR_TOKEN != ''
         uses: SonarSource/sonarqube-scan-action@v6
 
+  ai-code-review:
+    name: AI code review
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # the diff needs the base branch history
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies (locked, hash-verified)
+        run: pip install --require-hashes --only-binary :all: -r ai-gates/code-review/requirements.lock
+
+      - name: Review the pull request diff with Claude
+        run: python ai-gates/code-review/review.py --base "origin/${{ github.base_ref }}" --output ai-review.json
+
+      - name: Upload the review result (input for the P2 reproducibility check)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-review
+          path: ai-review.json
+          if-no-files-found: ignore
+
   sast:
     name: SAST (Semgrep)
     runs-on: ubuntu-latest
