@@ -5,7 +5,7 @@ gets back a structured list of findings, and fails when a finding reaches the co
 The pass/fail decision is computed here from the findings, not taken from free text, so it only
 depends on the findings and the threshold.
 
-Usage: python review.py --base origin/main [--output ai-review.json]
+Usage: python review.py --base origin/main (the result is written to ai-review.json)
 Exit codes: 0 pass, 1 fail, 2 the gate could not run (counts as a failed check).
 """
 
@@ -16,6 +16,7 @@ import fnmatch
 import hashlib
 import json
 import os
+import re
 import subprocess  # noqa: S404 - runs git with fixed arguments, no shell
 import sys
 from pathlib import Path
@@ -27,6 +28,9 @@ import yaml
 HERE = Path(__file__).resolve().parent
 SEVERITIES = ["low", "medium", "high", "critical"]
 REQUIRED_CONFIG = ("model", "effort", "max_tokens", "fail_on", "max_diff_chars")
+OUTPUT_FILE = "ai-review.json"
+# A branch name such as origin/main; never something git could read as an option.
+BASE_REF = re.compile(r"[A-Za-z0-9][A-Za-z0-9._/-]*")
 
 FINDINGS_SCHEMA: dict[str, Any] = {
     "type": "object",
@@ -72,6 +76,12 @@ def load_config(path: Path) -> dict[str, Any]:
 def fingerprint(*texts: str) -> str:
     """Short hash of the gate's configuration, to prove two runs used the same settings."""
     return hashlib.sha256("\n".join(texts).encode()).hexdigest()[:12]
+
+
+def checked_base(base: str) -> str:
+    if not BASE_REF.fullmatch(base) or ".." in base:
+        raise GateError(f"invalid base branch: {base!r}")
+    return base
 
 
 def git(*args: str) -> str:
@@ -170,14 +180,14 @@ def to_markdown(result: dict[str, Any]) -> str:
 def main(argv: list[str] | None = None, client: Any = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--base", default="origin/main", help="branch the PR will merge into")
-    parser.add_argument("--output", default="ai-review.json", help="where to write the result")
     args = parser.parse_args(argv)
 
     config_text = (HERE / "config.yaml").read_text()
     prompt = (HERE / "prompt.md").read_text()
     try:
         config = load_config(HERE / "config.yaml")
-        diff = filter_diff(git("diff", f"{args.base}...HEAD"), config["exclude"])
+        base = checked_base(args.base)
+        diff = filter_diff(git("diff", "--end-of-options", f"{base}...HEAD"), config["exclude"])
         result = run(client or anthropic.Anthropic(), config, prompt, diff)
     except (GateError, anthropic.AnthropicError, subprocess.CalledProcessError) as error:
         print(f"::error::AI code review could not run: {error}")
@@ -186,7 +196,7 @@ def main(argv: list[str] | None = None, client: Any = None) -> int:
     result["fail_on"] = config["fail_on"]
     result["config_fingerprint"] = fingerprint(config_text, prompt)
     result["commit"] = git("rev-parse", "HEAD").strip()
-    Path(args.output).write_text(json.dumps(result, indent=2) + "\n")
+    Path(OUTPUT_FILE).write_text(json.dumps(result, indent=2) + "\n")
 
     report = to_markdown(result)
     print(report)

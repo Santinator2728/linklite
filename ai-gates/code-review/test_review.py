@@ -122,12 +122,12 @@ def test_main_writes_result_and_summary(tmp_path, monkeypatch):
     monkeypatch.setattr(review, "git", fake_git)
     summary = tmp_path / "summary.md"
     monkeypatch.setenv("GITHUB_STEP_SUMMARY", str(summary))
-    output = tmp_path / "result.json"
+    monkeypatch.chdir(tmp_path)
 
-    code = review.main(["--output", str(output)], client=FakeClient(findings=[finding("high")]))
+    code = review.main([], client=FakeClient(findings=[finding("high")]))
 
     assert code == 1
-    result = json.loads(output.read_text())
+    result = json.loads((tmp_path / review.OUTPUT_FILE).read_text())
     assert result["decision"] == "fail"
     assert result["commit"] == "0123456789abcdef"
     assert len(result["config_fingerprint"]) == 12
@@ -138,8 +138,16 @@ def test_main_returns_2_when_the_gate_cannot_run(monkeypatch, capsys):
     monkeypatch.setattr(review, "git", fake_git)
     client = FakeClient(findings=[], stop_reason="refusal")
 
-    assert review.main(["--output", "unused.json"], client=client) == 2
+    assert review.main([], client=client) == 2
     assert "could not run" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize("base", ["--output=/tmp/x", "origin/main;rm -rf /", "a..b", "-p"])
+def test_main_rejects_a_base_that_is_not_a_branch_name(base, monkeypatch, capsys):
+    monkeypatch.setattr(review, "git", fake_git)
+
+    assert review.main([f"--base={base}"], client=FakeClient(findings=[])) == 2
+    assert "invalid base branch" in capsys.readouterr().out
 
 
 def test_git_runs_in_this_repository():

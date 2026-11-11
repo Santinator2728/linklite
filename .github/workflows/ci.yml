@@ -90,7 +90,9 @@ jobs:
         run: "pip install --require-hashes --only-binary :all: -r ai-gates/code-review/requirements.lock"
 
       - name: Review the pull request diff with Claude
-        run: python ai-gates/code-review/review.py --base "origin/${{ github.base_ref }}" --output ai-review.json
+        env:
+          BASE_REF: ${{ github.base_ref }} # via env, never interpolated into the shell script
+        run: python ai-gates/code-review/review.py --base "origin/$BASE_REF"
 
       - name: Upload the review result (input for the P2 reproducibility check)
         if: always()
