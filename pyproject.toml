@@ -1,0 +1,32 @@
+[project]
+name = "linklite"
+version = "0.1.0"
+description = "URL shortener with click analytics (X-Ops course project)"
+requires-python = ">=3.12"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "S", "SIM"]
+
+[tool.ruff.lint.per-file-ignores]
+"services/*/tests/*" = ["S101"]  # assert is how pytest works
+
+[tool.ruff.lint.isort]
+known-first-party = ["link_service", "redirect_service", "analytics_service"]
+
+[tool.pytest.ini_options]
+addopts = "--import-mode=importlib"
+pythonpath = ["services/link", "services/redirect", "services/analytics"]
+testpaths = ["services"]
+
+[tool.coverage.run]
+source = ["services"]
+omit = ["services/*/tests/*"]
+relative_files = true
+
+[tool.coverage.report]
+fail_under = 80
+show_missing = true

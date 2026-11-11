@@ -1,0 +1,33 @@
+# Whole LinkLite system (see docs/adr/ADR-001-architectural-style.md).
+# Start with: docker compose up --build
+services:
+  link:
+    build: ./services/link
+    ports:
+      - "8001:8000"
+    volumes:
+      - link-data:/data
+
+  analytics:
+    build: ./services/analytics
+    ports:
+      - "8003:8000"
+    volumes:
+      - click-data:/data
+
+  redirect:
+    build: ./services/redirect
+    ports:
+      - "8000:8000"
+    environment:
+      LINK_SERVICE_URL: http://link:8000
+      ANALYTICS_SERVICE_URL: http://analytics:8000
+    depends_on:
+      link:
+        condition: service_healthy
+      analytics:
+        condition: service_healthy
+
+volumes:
+  link-data:
+  click-data:
