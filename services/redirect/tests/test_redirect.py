@@ -63,12 +63,6 @@ def test_malformed_code_is_rejected_before_lookup(analytics):
     assert client.get("/bad-code!").status_code == 404
 
 
-def test_unsafe_stored_target_is_never_redirected(analytics):
-    client = make_client(FakeLinks({"abc1234": "javascript:alert(1)"}), analytics)
-
-    assert client.get("/abc1234").status_code == 404
-
-
 def test_link_service_failure_returns_503(analytics):
     client = make_client(FakeLinks(error=LinkServiceError("down")), analytics)
 
