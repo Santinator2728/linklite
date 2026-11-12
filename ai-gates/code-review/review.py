@@ -196,7 +196,8 @@ def main(argv: list[str] | None = None, client: Any = None) -> int:
     result["fail_on"] = config["fail_on"]
     result["config_fingerprint"] = fingerprint(config_text, prompt)
     result["commit"] = git("rev-parse", "HEAD").strip()
-    Path(OUTPUT_FILE).write_text(json.dumps(result, indent=2) + "\n")
+    with open(OUTPUT_FILE, "w", encoding="utf-8") as output:
+        json.dump(result, output, indent=2)
 
     report = to_markdown(result)
     print(report)
