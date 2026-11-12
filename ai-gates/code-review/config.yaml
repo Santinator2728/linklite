@@ -15,7 +15,7 @@ fail_on: high
 # Larger diffs are not sent (and the gate fails), instead of being cut and reviewed partially.
 max_diff_chars: 150000
 
-# Files left out of the review: generated or not code.
+# Files left out of the review: generated lock files only. Markdown is reviewed too, because the
+# gate's own prompt (prompt.md) is a Markdown file and changes to it must be visible.
 exclude:
   - "*.lock"
-  - "*.md"

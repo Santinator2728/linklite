@@ -152,3 +152,11 @@ def test_main_rejects_a_base_that_is_not_a_branch_name(base, monkeypatch, capsys
 
 def test_git_runs_in_this_repository():
     assert len(review.git("rev-parse", "HEAD").strip()) == 40
+
+
+@pytest.mark.parametrize("content", [[], [SimpleNamespace(type="text", text="not json")]])
+def test_run_rejects_an_answer_that_is_not_the_expected_json(content):
+    client = FakeClient(findings=[])
+    client.response.content = content
+    with pytest.raises(review.GateError, match="expected JSON"):
+        review.run(client, CONFIG, "prompt", DIFF)

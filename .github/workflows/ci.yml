@@ -75,12 +75,24 @@ jobs:
     name: AI code review
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     env:
-      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      BASE_REF: ${{ github.base_ref }} # via env, never interpolated into a shell script
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0 # the diff needs the base branch history
+
+      # A pull request must not be able to weaken the gate that reviews it, so the gate's code,
+      # prompt and settings come from the base branch. Changes to them are reviewed as normal
+      # diff and only take effect once merged.
+      - name: Use the AI gate from the base branch
+        run: |
+          if git cat-file -e "origin/$BASE_REF:ai-gates/code-review/review.py" 2>/dev/null; then
+            git checkout "origin/$BASE_REF" -- ai-gates/code-review
+          else
+            echo "::notice::The base branch has no AI gate yet; using the version in this PR."
+          fi
 
       - uses: actions/setup-python@v5
         with:
@@ -91,7 +103,7 @@ jobs:
 
       - name: Review the pull request diff with Claude
         env:
-          BASE_REF: ${{ github.base_ref }} # via env, never interpolated into the shell script
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: python ai-gates/code-review/review.py --base "origin/$BASE_REF"
 
       - name: Upload the review result (input for the P2 reproducibility check)

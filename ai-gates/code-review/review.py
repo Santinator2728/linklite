@@ -131,8 +131,11 @@ def ask_claude(client: Any, config: dict[str, Any], prompt: str, diff: str) -> d
     )
     if response.stop_reason != "end_turn":
         raise GateError(f"the model stopped early (stop_reason={response.stop_reason})")
-    text = next(block.text for block in response.content if block.type == "text")
-    review = json.loads(text)
+    texts = [block.text for block in response.content if block.type == "text"]
+    try:
+        review = json.loads(texts[0])
+    except (IndexError, json.JSONDecodeError) as error:
+        raise GateError("the model did not return the expected JSON") from error
     review["model"] = response.model
     review["request_id"] = getattr(response, "_request_id", None)
     review["usage"] = {
