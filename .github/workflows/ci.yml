@@ -71,6 +71,49 @@ jobs:
         if: env.SONAR_TOKEN != ''
         uses: SonarSource/sonarqube-scan-action@v6
 
+  ai-code-review:
+    name: AI code review
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      BASE_REF: ${{ github.base_ref }} # via env, never interpolated into a shell script
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # the diff needs the base branch history
+
+      # A pull request must not be able to weaken the gate that reviews it, so the gate's code,
+      # prompt and settings come from the base branch. Changes to them are reviewed as normal
+      # diff and only take effect once merged.
+      - name: Use the AI gate from the base branch
+        run: |
+          if git cat-file -e "origin/$BASE_REF:ai-gates/code-review/review.py" 2>/dev/null; then
+            git checkout "origin/$BASE_REF" -- ai-gates/code-review
+          else
+            echo "::notice::The base branch has no AI gate yet; using the version in this PR."
+          fi
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies (locked, hash-verified)
+        run: "pip install --require-hashes --only-binary :all: -r ai-gates/code-review/requirements.lock"
+
+      - name: Review the pull request diff with Claude
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python ai-gates/code-review/review.py --base "origin/$BASE_REF"
+
+      - name: Upload the review result (input for the P2 reproducibility check)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-review
+          path: ai-review.json
+          if-no-files-found: ignore
+
   sast:
     name: SAST (Semgrep)
     runs-on: ubuntu-latest

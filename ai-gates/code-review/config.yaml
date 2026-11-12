@@ -1,0 +1,21 @@
+# AI code review gate (Jira XP-36). Everything that can change the gate's decision lives
+# here, under version control, so a run can be repeated with the same settings (Ops Pattern P2).
+
+# Exact model ID, never an alias such as "latest": a new model must not change the gate silently.
+model: claude-opus-5-5
+
+# How much the model reasons before answering. Set explicitly: the model's default can change.
+effort: high
+
+max_tokens: 16000
+
+# The pipeline fails if any finding has this severity or higher (low < medium < high < critical).
+fail_on: high
+
+# Larger diffs are not sent (and the gate fails), instead of being cut and reviewed partially.
+max_diff_chars: 150000
+
+# Files left out of the review: generated lock files only. Markdown is reviewed too, because the
+# gate's own prompt (prompt.md) is a Markdown file and changes to it must be visible.
+exclude:
+  - "*.lock"
