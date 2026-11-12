@@ -10,7 +10,6 @@ from fastapi.responses import RedirectResponse
 from redirect_service.clients import AnalyticsClient, LinkClient, LinkServiceError
 
 CODE_PATTERN = re.compile(r"^[A-Za-z0-9]{1,32}$")
-SAFE_SCHEMES = ("http://", "https://")
 
 
 class Resolver(Protocol):
@@ -44,9 +43,6 @@ def create_app(links: Resolver | None = None, analytics: ClickRecorder | None = 
                 detail="Link lookup temporarily unavailable",
             ) from exc
         if url is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Link not found")
-        # Defence in depth: never redirect to a non-http(s) target, even if one was stored.
-        if not url.lower().startswith(SAFE_SCHEMES):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Link not found")
 
         analytics.record_click(code, request.headers.get("referer"))
