@@ -1,5 +1,8 @@
 # Whole LinkLite system (see docs/adr/ADR-001-architectural-style.md).
 # Start with: docker compose up --build
+# Fixed project name, so the network is always "linklite_default" (the DAST job uses it).
+name: linklite
+
 services:
   link:
     build: ./services/link

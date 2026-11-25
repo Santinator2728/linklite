@@ -171,3 +171,47 @@ jobs:
       - name: Stop the system
         if: always()
         run: docker compose down --volumes
+
+  dast:
+    name: DAST (OWASP ZAP)
+    runs-on: ubuntu-latest
+    needs: lint-and-test
+    timeout-minutes: 30
+    env:
+      ZAP_IMAGE: ghcr.io/zaproxy/zaproxy:2.17.0@sha256:9624669db72f54d86c4b46a7064518bd9bf79d8c61a4c31befa9923489f328af
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build and start the system (docker compose)
+        run: docker compose up --build --detach --wait --wait-timeout 120
+
+      # ZAP reads each service's OpenAPI description and attacks every endpoint of the
+      # running system (passive checks plus active attacks such as injection).
+      - name: Scan each service API with ZAP
+        run: |
+          mkdir -p zap-reports && chmod 777 zap-reports
+          for service in link redirect analytics; do
+            docker run --rm --network linklite_default \
+              -v "$PWD/zap-reports:/zap/wrk:rw" "$ZAP_IMAGE" \
+              zap-api-scan.py -t "http://$service:8000/openapi.json" -f openapi \
+              -J "$service.json" -r "$service.html" -I
+          done
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: DAST gate (fails on Medium or High alerts that are not accepted)
+        run: python dast/zap_gate.py zap-reports/link.json zap-reports/redirect.json zap-reports/analytics.json
+
+      - name: Upload ZAP reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zap-reports
+          path: zap-reports/
+          if-no-files-found: ignore
+
+      - name: Stop the system
+        if: always()
+        run: docker compose down --volumes
