@@ -17,7 +17,6 @@ from redirect_service.clients import (
 )
 
 CODE_PATTERN = re.compile(r"^[A-Za-z0-9]{1,32}$")
-SAFE_SCHEMES = ("http://", "https://")
 
 # Request time buckets in seconds, fine enough to see the few milliseconds of an internal call.
 LATENCY_BUCKETS = (0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5)
@@ -61,9 +60,6 @@ def create_app(links: Resolver | None = None, analytics: ClickRecorder | None = 
                 detail="Link lookup temporarily unavailable",
             ) from exc
         if url is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Link not found")
-        # Defence in depth: never redirect to a non-http(s) target, even if one was stored.
-        if not url.lower().startswith(SAFE_SCHEMES):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Link not found")
 
         analytics.record_click(code, request.headers.get("referer"))
