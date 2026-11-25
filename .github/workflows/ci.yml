@@ -161,6 +161,9 @@ jobs:
           pip install httpx==0.28.1
           python tests/system/smoke_test.py
 
+      - name: Observability check – Prometheus scrapes the services, Grafana has the dashboard
+        run: python tests/system/observability_check.py
+
       - name: Service logs
         if: always()
         run: docker compose logs

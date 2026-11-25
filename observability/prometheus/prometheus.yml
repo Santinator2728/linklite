@@ -1,0 +1,15 @@
+# Prometheus scrapes the /metrics endpoint of each LinkLite service (XP-45).
+global:
+  scrape_interval: 5s
+  evaluation_interval: 5s
+
+scrape_configs:
+  - job_name: link
+    static_configs:
+      - targets: ["link:8000"]
+  - job_name: redirect
+    static_configs:
+      - targets: ["redirect:8000"]
+  - job_name: analytics
+    static_configs:
+      - targets: ["analytics:8000"]

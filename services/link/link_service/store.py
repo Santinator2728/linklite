@@ -9,6 +9,8 @@ from dataclasses import dataclass
 CODE_ALPHABET = string.ascii_letters + string.digits
 CODE_LENGTH = 7
 MAX_CODE_ATTEMPTS = 5
+# Paths the redirect service uses for itself; a short code must never take one of them.
+RESERVED_CODES = frozenset({"metrics"})
 
 
 @dataclass(frozen=True)
@@ -36,6 +38,8 @@ class LinkStore:
     def create(self, url: str) -> Link:
         for _ in range(MAX_CODE_ATTEMPTS):
             code = "".join(secrets.choice(CODE_ALPHABET) for _ in range(CODE_LENGTH))
+            if code in RESERVED_CODES:
+                continue
             try:
                 with self._lock, self._conn:
                     self._conn.execute("INSERT INTO links (code, url) VALUES (?, ?)", (code, url))

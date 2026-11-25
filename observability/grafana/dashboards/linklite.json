@@ -1,0 +1,292 @@
+{
+  "uid": "linklite-overview",
+  "title": "LinkLite – redirect bottleneck",
+  "tags": [
+    "linklite"
+  ],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": false,
+  "refresh": "5s",
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "text",
+      "title": "What this dashboard shows",
+      "gridPos": {
+        "h": 4,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "**Architectural insight (ADR-001):** every redirect makes two synchronous calls before it answers: to **link-service** (find the URL) and to **analytics-service** (record the click). The panels below split the redirect time into those calls, so we can see how much of the hot path is spent waiting on other services instead of doing its own work. Generate traffic with `python scripts/generate_traffic.py`."
+      }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Redirect time spent waiting",
+      "description": "Time spent in calls to link-service and analytics-service divided by the total redirect time (last minute).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 0,
+        "y": 4
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(rate(linklite_dependency_call_seconds_sum[1m])) / sum(rate(http_request_duration_seconds_sum{job=\"redirect\",handler=\"/{code}\"}[1m]))",
+          "legendFormat": "waiting",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.5
+              },
+              {
+                "color": "red",
+                "value": 0.8
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "area"
+      }
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Average redirect time, split into its parts",
+      "description": "Per redirect: total time, time waiting for link-service and time waiting for analytics-service. The gap between the total and the two calls is the redirect's own work.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 16,
+        "x": 8,
+        "y": 4
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(rate(http_request_duration_seconds_sum{job=\"redirect\",handler=\"/{code}\"}[1m])) / sum(rate(http_request_duration_seconds_count{job=\"redirect\",handler=\"/{code}\"}[1m]))",
+          "legendFormat": "total redirect",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(rate(linklite_dependency_call_seconds_sum{dependency=\"link\"}[1m])) / sum(rate(http_request_duration_seconds_count{job=\"redirect\",handler=\"/{code}\"}[1m]))",
+          "legendFormat": "waiting for link-service",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(rate(linklite_dependency_call_seconds_sum{dependency=\"analytics\"}[1m])) / sum(rate(http_request_duration_seconds_count{job=\"redirect\",handler=\"/{code}\"}[1m]))",
+          "legendFormat": "waiting for analytics-service",
+          "refId": "C"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Slowest 5% of redirects and of each call (p95)",
+      "description": "95th percentile time of the redirect and of each outgoing call.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 11
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket{job=\"redirect\",handler=\"/{code}\"}[1m])))",
+          "legendFormat": "redirect p95",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le, dependency) (rate(linklite_dependency_call_seconds_bucket[1m])))",
+          "legendFormat": "{{dependency}}-service call p95",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Requests per second by service and endpoint",
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 11
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (job, handler) (rate(http_requests_total[1m]))",
+          "legendFormat": "{{job}} {{handler}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        },
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Failed calls from the redirect to other services",
+      "description": "Calls that timed out, could not connect or got an error answer.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 0,
+        "y": 19
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (dependency) (rate(linklite_dependency_call_seconds_count{outcome=\"error\"}[1m]))",
+          "legendFormat": "{{dependency}}-service",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        },
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Server errors (5xx) by service",
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 12,
+        "y": 19
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (job) (rate(http_requests_total{status=\"5xx\"}[1m]))",
+          "legendFormat": "{{job}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        },
+        "overrides": []
+      },
+      "options": {}
+    }
+  ]
+}

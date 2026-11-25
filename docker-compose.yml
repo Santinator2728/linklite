@@ -28,6 +28,34 @@ services:
       analytics:
         condition: service_healthy
 
+  # Observability layer (XP-45). Ports are bound to this machine only.
+  # Prometheus: http://localhost:9090  -  Grafana: http://localhost:3000 (dashboard "LinkLite")
+  prometheus:
+    image: prom/prometheus:v3.15.1@sha256:fa3302279710be2f21a8301ec17a8b4f2301fd829bd113839b3b6b02b6f191a2
+    ports:
+      - "127.0.0.1:9090:9090"
+    volumes:
+      - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    depends_on:
+      - link
+      - redirect
+      - analytics
+
+  grafana:
+    image: grafana/grafana:13.2.7@sha256:9fd7619deb8923fc422f2183c3f82fc8dc2f668fd2b54b087336f597cfd92b0d
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      # Read-only access without login, for local use and the demo.
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/linklite.json
+    volumes:
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      - prometheus
+
 volumes:
   link-data:
   click-data:

@@ -1,0 +1,10 @@
+# Load the dashboards saved in the repo, so they are versioned like the code (XP-45).
+apiVersion: 1
+providers:
+  - name: linklite
+    folder: LinkLite
+    type: file
+    disableDeletion: true
+    allowUiUpdates: false
+    options:
+      path: /var/lib/grafana/dashboards
