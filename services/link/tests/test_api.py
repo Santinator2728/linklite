@@ -60,3 +60,18 @@ def test_store_gives_up_after_repeated_code_collisions(store, monkeypatch):
 
     with pytest.raises(CodeGenerationError):
         store.create("https://example.org")
+
+
+def test_store_never_hands_out_a_reserved_code(store, monkeypatch):
+    letters = iter("metrics" + "b" * CODE_LENGTH)
+    monkeypatch.setattr(store_module.secrets, "choice", lambda alphabet: next(letters))
+
+    assert store.create("https://example.com").code == "b" * CODE_LENGTH
+
+
+def test_metrics_endpoint_counts_requests(client):
+    client.post("/links", json={"url": "https://example.com"})
+
+    body = client.get("/metrics").text
+
+    assert 'http_requests_total{handler="/links",method="POST",status="2xx"}' in body

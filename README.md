@@ -22,6 +22,18 @@ curl -X POST localhost:8001/links -H 'Content-Type: application/json' -d '{"url"
 curl -i localhost:8000/<code>
 ```
 
+## Observability
+
+`docker compose up` also starts Prometheus (http://localhost:9090) and Grafana (http://localhost:3000, read-only without login). The dashboard **LinkLite – redirect bottleneck** shows how much of the redirect time is spent waiting on link-service and analytics-service, the known weakness accepted in ADR-001.
+
+To fill the dashboard with data:
+
+```bash
+.venv/bin/python scripts/generate_traffic.py 600
+```
+
+Each service exposes its metrics at `/metrics`. The redirect service also records how long each call to the other services takes (`linklite_dependency_call_seconds`). Prometheus reads them every 5 seconds; its settings and the dashboard live in `observability/`.
+
 ## Develop
 
 ```bash

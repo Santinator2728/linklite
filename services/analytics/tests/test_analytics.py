@@ -41,3 +41,11 @@ def test_long_referrer_is_truncated(store):
 
     (stored,) = store._conn.execute("SELECT referrer FROM clicks").fetchone()
     assert len(stored) == MAX_REFERRER_LENGTH
+
+
+def test_metrics_endpoint_counts_requests(client):
+    client.get("/stats/abc1234")
+
+    body = client.get("/metrics").text
+
+    assert 'http_requests_total{handler="/stats/{code}",method="GET",status="2xx"}' in body
